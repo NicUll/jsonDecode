@@ -1,10 +1,14 @@
 {%  load staticfiles %}
 <link rel="stylesheet" type="text/css" href="{%  static "relreq/style.css" %}" />
 <div id="maincontainer">
-<form action="index.html" method="post">
+<form action="index" method="post">
     {% csrf_token %}
     {{ form }}
     <input type="submit" value="Kör">
 
 </form>
+    {% if data %}
+        <p>{{ data }}</p>
+    {% endif %}
+
 </div>
