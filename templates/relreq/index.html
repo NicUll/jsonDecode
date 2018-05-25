@@ -1,0 +1,9 @@
+{%  load staticfiles %}
+
+{%  if request_result %}
+
+    {% for line in request_result %}
+        <p>{{ line }}</p>
+    {%  endfor %}
+
+{%  endif %}
