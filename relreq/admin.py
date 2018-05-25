@@ -1,3 +1,11 @@
 from django.contrib import admin
+from .models import Connection, JsonDictionaryEntry, DictGroup
 
-# Register your models here.
+
+
+
+
+admin.site.register(Connection)
+#admin.site.register(GetType)
+admin.site.register(JsonDictionaryEntry)
+admin.site.register(DictGroup)

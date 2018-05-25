@@ -1,9 +1,10 @@
 {%  load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{%  static "relreq/style.css" %}" />
+<div id="maincontainer">
+<form action="index.html" method="post">
+    {% csrf_token %}
+    {{ form }}
+    <input type="submit" value="Kör">
 
-{%  if request_result %}
-
-    {% for line in request_result %}
-        <p>{{ line }}</p>
-    {%  endfor %}
-
-{%  endif %}
+</form>
+</div>

@@ -6,8 +6,6 @@ from django.core.validators import URLValidator
 from django.db import models
 
 
-
-
 class Requester(object):
     validate = URLValidator()
 
@@ -59,3 +57,55 @@ class Settings(object):
         if isinstance(name, str):
             return self._data.get(name)
         return None
+
+
+class Connection(models.Model):
+    hostname = models.CharField(max_length=200)
+    hosturl = models.CharField(max_length=200)
+    restuser = models.CharField(max_length=20)
+    restpass = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.hostname
+
+    def getlogin(self):
+        return self.restuser, self.restpass
+
+    def generateurl(self, baseurl):
+        return str.join("https://", self.hosturl, baseurl)
+
+    def storefullurl(self, baseurl):
+        self.hosturl = self.generateurl()
+
+
+class DictGroup(models.Model):
+    name = models.CharField(max_length=40)
+    dictentryid = models.IntegerField(null=True, blank=True)
+    rules = models.CharField(max_length=20, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class JsonDictionaryEntry(models.Model):
+    parent = models.ForeignKey(DictGroup, on_delete=models.CASCADE)  # All should have parent, top level has main
+    jsonvalue = models.CharField(max_length=20)
+    displayvalue = models.CharField(max_length=40)
+    haschildren = models.BooleanField()  # If it does, add to dictgroups
+
+    def __str__(self):
+        return self.displayvalue
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.haschildren:
+            dg = DictGroup(dictentryid=self.pk)
+            dg.save()
+
+
+class GetType(models.Model):
+    resourcepath = models.CharField(max_length=30)
+    resourcename = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.resourcename

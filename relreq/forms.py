@@ -1,7 +1,9 @@
 from django import forms
 
+from relreq.models import Connection
+
 
 class RequestForm(forms.Form):
-
-    environment = forms.CharField(label='Miljö', max_length=100)
-    id = forms.CharField(label='Id', max_length=40)
+    connection = forms.ModelChoiceField(queryset=Connection.objects.all().order_by('hostname'), initial=0)
+    #gettype = forms.ModelChoiceField(queryset=GetType.objects.all().order_by('resourcename'), initial=0)
+    querydata = forms.CharField(max_length=50)
