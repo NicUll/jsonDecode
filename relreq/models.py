@@ -68,14 +68,18 @@ class Connection(models.Model):
     def __str__(self):
         return self.hostname
 
+    def save(self, *args, **kwargs):
+        self.storefullurl(".abalonrelevate.se/api")
+        super(*args, **kwargs).save()
+
     def getlogin(self):
         return self.restuser, self.restpass
 
     def generateurl(self, baseurl):
-        return str.join("https://", self.hosturl, baseurl)
+        return "https://".join(self.hosturl).join(baseurl)
 
     def storefullurl(self, baseurl):
-        self.hosturl = self.generateurl()
+        self.hosturl = self.generateurl(baseurl)
 
 
 class DictGroup(models.Model):

@@ -17,8 +17,7 @@ def index(request):
                 connection = request.POST.get("connection")
                 gettype = request.POST.get("gettype")
                 querydata = request.POST.get("querydata")
-
-                r = requests.get(connection.generateurl())
-
+            except:
+                print("Fail")
 
     return render(request, 'relreq/index.html', {'form': form, 'data': data})
