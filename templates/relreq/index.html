@@ -1,14 +1,16 @@
-{%  load staticfiles %}
-<link rel="stylesheet" type="text/css" href="{%  static "relreq/style.css" %}" />
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static "relreq/style.css" %}"/>
 <div id="maincontainer">
-<form action="index" method="post">
-    {% csrf_token %}
-    {{ form }}
-    <input type="submit" value="Kör">
+    <form action="index" method="post">
+        {% csrf_token %}
+        {{ form }}
+        <input type="submit" value="Kör">
 
-</form>
+    </form>
     {% if data %}
-        <p>{{ data }}</p>
+        <div id="response-text">
+            <p>{{ data }}</p>
+        </div>
     {% endif %}
 
 </div>

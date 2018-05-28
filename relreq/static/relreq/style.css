@@ -46,3 +46,8 @@ input[type=submit]{
     border: darkcyan;
 }
 
+#response-text{
+    background: white;
+
+}
+
