@@ -16,30 +16,34 @@ class JSONCleaner(object):
 
     def clean(self, json_text):
         data = json.loads(json_text)
-        print(data)
         return_string = self.iter_dict(data, self.parent)
-        print("Created entries: %s \n Created groups: %s" % (self.new_entries, self.new_groups))
         return return_string
 
     def iter_dict(self, data, parent):
-        return_string = ""
+        return_string = "<section>\n"
+
+        if isinstance(data, list):
+            for entry in data:
+                return_string += self.iter_dict(entry, parent)
+            return return_string
+
         for key, value in data.items():
-            haschildren = isinstance(value, dict)
-            jsonobj, created = JsonDictionaryEntry.objects.get_or_create(jsonvalue=key,
+            haschildren = isinstance(value, dict) or isinstance(value, list)
+            jsonobj, created = JsonDictionaryEntry.objects.get_or_create(parent=parent, jsonvalue=key,
                                                                          defaults={
                                                                              'parent': parent,
                                                                              'displayvalue': key,
                                                                              'haschildren': haschildren})
-            if created:
-                self.new_entries.append(key)
-
+            # if created:
+            #     self.new_entries.append(key)
             if haschildren:
-                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk, defaults={'name': key})
-                if created:
-                    self.new_groups.append(key)
-
-                self.iter_dict(data[key], dictgroupobj)
-            return_string += jsonobj.displayvalue + str(": %s" % value)
+                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk, defaults={'name': key, 'parent': parent.pk})
+                # if created:
+                #     self.new_groups.append(key)
+                return_string += "<p class='parent'>" + key + "</p>"
+                return_string += self.iter_dict(value, dictgroupobj)
+            return_string += jsonobj.displayvalue + str(": %s\n" % value)
+        return_string += "\n</section>\n"
         return return_string
 
 
@@ -60,7 +64,7 @@ class Requester(object):
 
     def generate_get_type(self):
         gettype = self.request.POST.get("gettype")
-        primary_dg_name = GetType.objects.all().values_list('resourcename', flat=True).get(pk=gettype) + "prim_group"
+        primary_dg_name = GetType.objects.all().values_list('resourcename', flat=True).get(pk=gettype) + "_prim_group"
         self.primary_dict_group, created = DictGroup.objects.get_or_create(name=primary_dg_name)
         return GetType.objects.all().values_list('resourcepath', flat=True).get(pk=gettype)
 
@@ -89,8 +93,7 @@ class Requester(object):
 
     def get_results_pretty(self):
         self.jsoncleaner = JSONCleaner(self.primary_dict_group)
-        self.jsoncleaner.clean(self.get_results_text())
-
+        return self.jsoncleaner.clean(self.get_results_text())
 
     # return values
 
@@ -149,9 +152,26 @@ class Connection(models.Model):
 class DictGroup(models.Model):
     name = models.CharField(max_length=40)
     dictentryid = models.IntegerField(null=True, blank=True)
+    parent = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.name
+
+    def delete_group(self, keep_sub=True):
+        dict_entry_list = JsonDictionaryEntry.objects.filter(parent=self.pk)
+        for entry in dict_entry_list:
+            if not keep_sub:
+                if entry.haschildren:
+                    DictGroup.objects.get(dictentryid=entry.pk).delete_group(False)
+                entry.delete()
+            else:
+                parent_entry, created = DictGroup.objects.get_or_create(pk=self.parent, defaults={"name": "virtual"})
+                parent_entry_id = parent_entry.pk
+                if created:
+                    self.parent = parent_entry_id
+                entry.parent = parent_entry_id
+
+        self.delete()
 
 
 class JsonDictionaryEntry(models.Model):

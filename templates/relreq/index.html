@@ -9,7 +9,7 @@
     </form>
     {% if data %}
         <div id="response-text">
-            <p>{{ data }}</p>
+            {{ data|safe }}
         </div>
     {% endif %}
 

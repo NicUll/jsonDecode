@@ -26,7 +26,7 @@ def index(request):
                 # requestText = connectionString + "/" + gettypeString + "/" + querydata
                 # print(requestText)
                 r = requester.make_request()
-                requester.get_results_pretty()
+                data = requester.get_results_pretty()
 
 
 
