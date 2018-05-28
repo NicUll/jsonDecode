@@ -69,14 +69,15 @@ class Connection(models.Model):
         return self.hostname
 
     def save(self, *args, **kwargs):
-        self.storefullurl(".abalonrelevate.se/api")
+        if "/api" not in self.hosturl:
+            self.storefullurl(".abalonrelevate.se/api")
         super(*args, **kwargs).save()
 
     def getlogin(self):
         return self.restuser, self.restpass
 
     def generateurl(self, baseurl):
-        return "https://".join(self.hosturl).join(baseurl)
+        return "https://" + self.hosturl + baseurl
 
     def storefullurl(self, baseurl):
         self.hosturl = self.generateurl(baseurl)
@@ -85,7 +86,6 @@ class Connection(models.Model):
 class DictGroup(models.Model):
     name = models.CharField(max_length=40)
     dictentryid = models.IntegerField(null=True, blank=True)
-    rules = models.CharField(max_length=20, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -102,8 +102,8 @@ class JsonDictionaryEntry(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        if self.haschildren:
-            dg = DictGroup(dictentryid=self.pk)
+        if self.haschildren and not DictGroup.objects.filter(dictentryid=self.pk).exists():
+            dg = DictGroup(dictentryid=self.pk, name=self.displayvalue)
             dg.save()
 
 
