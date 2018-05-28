@@ -20,9 +20,10 @@ class JSONCleaner(object):
         return return_string
 
     def iter_dict(self, data, parent):
-        return_string = "<section>\n"
+        return_string = "<section class='" + parent.name + "'>\n"
 
         if isinstance(data, list):
+
             for entry in data:
                 return_string += self.iter_dict(entry, parent)
             return return_string
@@ -37,12 +38,15 @@ class JSONCleaner(object):
             # if created:
             #     self.new_entries.append(key)
             if haschildren:
-                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk, defaults={'name': key, 'parent': parent.pk})
+                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
+                                                                        defaults={'name': key, 'parent': parent.pk})
                 # if created:
                 #     self.new_groups.append(key)
-                return_string += "<p class='parent'>" + key + "</p>"
+                return_string += "<div class='group " + dictgroupobj.name + "'><p class='parent-name'>" + key + "</p>"
                 return_string += self.iter_dict(value, dictgroupobj)
-            return_string += jsonobj.displayvalue + str(": %s\n" % value)
+                return_string += "</div>"
+            else:
+                return_string += "<p class='entry'> %s: %s </p>" % (jsonobj.displayvalue, value)
         return_string += "\n</section>\n"
         return return_string
 

@@ -52,6 +52,24 @@ input[type=submit]{
 
 #response-text{
     background: white;
+    font-size: 1.1em;
+    font-family: Serif;
+}
 
+.parent-name{
+    font-size: 1.3em;
+}
+
+.group {
+    margin: 5px 0px 5px 20px;
+
+}
+
+#admin-link{
+    color: white;
+}
+
+#admin-link:hover{
+    color:black;
 }
 
