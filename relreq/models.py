@@ -9,13 +9,38 @@ from django.db import models
 
 class JSONCleaner(object):
 
-    def __init__(self, dict_table):
-        self.dict_table = dict_table
-        self.json_list = []
+    def __init__(self, parent):
+        self.parent = parent
+        self.new_groups = []
+        self.new_entries = []
 
     def clean(self, json_text):
         data = json.loads(json_text)
-        print(data["accountNumber"])
+        print(data)
+        return_string = self.iter_dict(data, self.parent)
+        print("Created entries: %s \n Created groups: %s" % (self.new_entries, self.new_groups))
+        return return_string
+
+    def iter_dict(self, data, parent):
+        return_string = ""
+        for key, value in data.items():
+            haschildren = isinstance(value, dict)
+            jsonobj, created = JsonDictionaryEntry.objects.get_or_create(jsonvalue=key,
+                                                                         defaults={
+                                                                             'parent': parent,
+                                                                             'displayvalue': key,
+                                                                             'haschildren': haschildren})
+            if created:
+                self.new_entries.append(key)
+
+            if haschildren:
+                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk, defaults={'name': key})
+                if created:
+                    self.new_groups.append(key)
+
+                self.iter_dict(data[key], dictgroupobj)
+            return_string += jsonobj.displayvalue + str(": %s" % value)
+        return return_string
 
 
 class Requester(object):
@@ -27,6 +52,7 @@ class Requester(object):
         self.login = None
         self.results = None
         self.jsoncleaner = None
+        self.primary_dict_group = None
 
     def generate_connection_string(self):
         connection = self.request.POST.get("connection")
@@ -34,6 +60,8 @@ class Requester(object):
 
     def generate_get_type(self):
         gettype = self.request.POST.get("gettype")
+        primary_dg_name = GetType.objects.all().values_list('resourcename', flat=True).get(pk=gettype) + "prim_group"
+        self.primary_dict_group, created = DictGroup.objects.get_or_create(name=primary_dg_name)
         return GetType.objects.all().values_list('resourcepath', flat=True).get(pk=gettype)
 
     def generate_querydata(self):
@@ -60,8 +88,9 @@ class Requester(object):
         return self.results.text
 
     def get_results_pretty(self):
-        self.jsoncleaner = JSONCleaner(JsonDictionaryEntry.objects.all())
+        self.jsoncleaner = JSONCleaner(self.primary_dict_group)
         self.jsoncleaner.clean(self.get_results_text())
+
 
     # return values
 
