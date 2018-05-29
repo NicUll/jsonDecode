@@ -2,3 +2,7 @@
 /relreq/localsettings.py
 /jsonDecode/settings.py
 /relreq/deprecated.py
+/venv/
+/manage.py
+/db.sqlite3
+/.idea/dataSources/
