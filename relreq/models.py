@@ -23,7 +23,6 @@ class JSONCleaner(object):
         return_string = "<section class='" + parent.name + "'>\n"
 
         if isinstance(data, list):
-
             for entry in data:
                 return_string += self.iter_dict(entry, parent)
             return return_string
@@ -183,6 +182,8 @@ class JsonDictionaryEntry(models.Model):
     jsonvalue = models.CharField(max_length=20)
     displayvalue = models.CharField(max_length=40)
     haschildren = models.BooleanField()  # If it does, add to dictgroups
+  #  type = models.CharField(max_length=20)
+  #  attributes = models.CharField()
 
     def __str__(self):
         return self.displayvalue
