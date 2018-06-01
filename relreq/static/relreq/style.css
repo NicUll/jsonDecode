@@ -1,8 +1,31 @@
-
-p{
-    margin: 0px;
-    padding: 0px;
+html {
+    box-sizing: border-box;
 }
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+body {
+    background-color: #FFFFFF;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ul {
+    margin: 0;
+    padding: 0;
+    font-family: 'Do Hyeon', sans-serif;
+}
+
 
 #maincontainer{
     margin: auto;
@@ -14,11 +37,12 @@ p{
     border-radius: 10px;
 }
 
-form *{
-    display: flex;
-    flex-direction: column;
-    align-content: center;
+form {
+    width: 100%;
 }
+
+
+
 
 label {
     text-align: center;
@@ -26,16 +50,19 @@ label {
 }
 
 select {
-    width: 100%;
+
     padding: 10px;
     font-size: 1.3em;
-    margin-bottom: 10px;
+    border-radius: 8px;
+
+
 }
 
 input[type=text]{
     width: 100%;
     padding: 5px;
     font-family: Consolas;
+    border-radius: 5px;
 }
 
 input[type=submit]{
@@ -48,6 +75,39 @@ input[type=submit]{
     background: darkslategrey;
     color: white;
     border: darkcyan;
+}
+
+#type-group{
+    display: flex;
+    margin: 10px 0 10px 0;
+}
+
+#type-group *{
+    align-self: center;
+
+}
+
+#type-group select{
+    flex-grow: 2;
+}
+
+input[type=checkbox]{
+    width: 20px;
+    height: 20px;
+}
+
+
+
+#connection{
+    position: relative;
+    width: 250px;
+    transform: translate(-50%);
+    left: 50%;
+}
+
+.center-div{
+    margin: auto;
+    width: 120px;
 }
 
 #response-text{

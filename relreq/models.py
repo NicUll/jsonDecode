@@ -79,6 +79,8 @@ class Requester(object):
         for arg in args:
             arg.strip("/")
             self.connection_url += arg + "/"
+        if self.request.POST.get("getall"):
+            self.connection_url += "info/"
 
     def generate_login(self):
         self.login = Connection.objects.get(pk=self.request.POST.get("connection")).getlogin()
@@ -182,8 +184,8 @@ class JsonDictionaryEntry(models.Model):
     jsonvalue = models.CharField(max_length=20)
     displayvalue = models.CharField(max_length=40)
     haschildren = models.BooleanField()  # If it does, add to dictgroups
-  #  type = models.CharField(max_length=20)
-  #  attributes = models.CharField()
+    #type = models.CharField(max_length=20)
+    #attributes = models.CharField(max_length=300)
 
     def __str__(self):
         return self.displayvalue

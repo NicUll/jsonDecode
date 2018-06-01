@@ -4,7 +4,30 @@
 <div id="maincontainer">
     <form action="index" method="post">
         {% csrf_token %}
-        {{ form }}
+        {{ form.non_field_errors }}
+
+        {{ form.source.errors }}
+        {{ form.source }}
+        <div class="center-div">
+            {{ form.connection.errors }}
+            {{ form.connection }}
+        </div>
+
+        <div id="type-group">
+
+
+            {{ form.gettype.errors }}
+            {{ form.gettype }}
+            {{ form.getall.label_tag }}
+            {{ form.getall.errors }}
+
+            {{ form.getall }}
+
+        </div>
+
+        {{ form.querydata.errors }}
+        {{ form.querydata }}
+
         <input type="submit" value="Kör">
 
     </form>
