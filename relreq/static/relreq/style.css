@@ -66,6 +66,9 @@ input[type=text]{
 }
 
 input[type=submit]{
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
     padding: 10px 40px;
     font-family: Arial;
     font-size: 1.2em;
