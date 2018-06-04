@@ -42,7 +42,7 @@ class JSONCleaner(object):
                 dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
                                                                         defaults={'name': key, 'parent': parent.pk})
 
-                return_string += "<div class='group " + dictgroupobj.name + "'><p class='parent-name'>" + key + "</p>"
+                return_string += "<div class='group " + dictgroupobj.name + "'><p class='parent-name'>" + jsonobj.displayvalue + "</p>"
                 return_string += self.iter_dict(value, dictgroupobj)
                 return_string += "</div>"
             else:
@@ -185,8 +185,9 @@ class JsonDictionaryEntry(models.Model):
     jsonvalue = models.CharField(max_length=20)
     displayvalue = models.CharField(max_length=40)
     haschildren = models.BooleanField()  # If it does, add to dictgroups
-    #type = models.CharField(max_length=20)
-    #attributes = models.CharField(max_length=300)
+
+    # type = models.CharField(max_length=20)
+    # attributes = models.CharField(max_length=300)
 
     def __str__(self):
         return self.displayvalue
@@ -200,17 +201,15 @@ class JsonDictionaryEntry(models.Model):
     def auto_gen_name(self):
         init_name = re.search('[a-z][^A-Z]*', self.jsonvalue)
         splitstring = [init_name.group(0)]
-        print(splitstring)
         splitstring.extend(re.findall('[A-Z][^A-Z]*', self.jsonvalue))
-        print(splitstring)
         splitstring[0] = splitstring[0].title()
-        print(splitstring[0])
         joinstring = " ".join(splitstring)
         return joinstring
 
     def update_display_value(self, value):
         self.displayvalue = value
         self.save()
+
 
 class GetType(models.Model):
     resourcepath = models.CharField(max_length=30)
