@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import models
 
+from relreq.namegenerator import auto_gen_name
+
 
 class JSONCleaner(object):
 
@@ -36,17 +38,24 @@ class JSONCleaner(object):
                                                                              'displayvalue': key,
                                                                              'haschildren': haschildren})
             if created:
-                jsonobj.update_display_value(jsonobj.auto_gen_name())
+                jsonobj.update_display_value(auto_gen_name(key))
+            print(jsonobj.displayvalue)
 
             if haschildren:
                 dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
-                                                                        defaults={'name': key, 'parent': parent.pk})
-
-                return_string += "<div class='group " + dictgroupobj.name + "'><p class='parent-name'>" + jsonobj.displayvalue + "</p>"
+                                                                        defaults={'name': key,
+                                                                                  'displayvalue': jsonobj.displayvalue,
+                                                                                  'parent': parent.pk})
+                return_string += "<div class='group " + dictgroupobj.name + "'>"
+                if ~jsonobj.hide_name:
+                    return_string += "<p class='parent-name'>" + dictgroupobj.name + "</p>"
                 return_string += self.iter_dict(value, dictgroupobj)
                 return_string += "</div>"
+
             else:
-                return_string += "<p class='entry'> %s: %s </p>" % (jsonobj.displayvalue, value)
+                if ~jsonobj.hide_value and ~JsonDictionaryEntry.objects.get(jsonobj.parent).hide_value:
+                    return_string += "<p class='entry'> %s: %s </p>" % (jsonobj.displayvalue, value)
+
         return_string += "\n</section>\n"
         return return_string
 
@@ -69,7 +78,8 @@ class Requester(object):
     def generate_get_type(self):
         gettype = self.request.POST.get("gettype")
         primary_dg_name = GetType.objects.all().values_list('resourcename', flat=True).get(pk=gettype) + "_prim_group"
-        self.primary_dict_group, created = DictGroup.objects.get_or_create(name=primary_dg_name)
+        self.primary_dict_group, created = DictGroup.objects.get_or_create(name=primary_dg_name,
+                                                                           displayvalue=primary_dg_name)
         return GetType.objects.all().values_list('resourcepath', flat=True).get(pk=gettype)
 
     def generate_querydata(self):
@@ -157,6 +167,7 @@ class Connection(models.Model):
 
 class DictGroup(models.Model):
     name = models.CharField(max_length=40)
+    displayvalue = models.CharField(max_length=40, null=True, blank=True)
     dictentryid = models.IntegerField(null=True, blank=True)
     parent = models.IntegerField(null=True, blank=True)
 
@@ -182,9 +193,11 @@ class DictGroup(models.Model):
 
 class JsonDictionaryEntry(models.Model):
     parent = models.ForeignKey(DictGroup, on_delete=models.CASCADE)  # All should have parent, top level has main
-    jsonvalue = models.CharField(max_length=20)
+    jsonvalue = models.CharField(max_length=40)
     displayvalue = models.CharField(max_length=40)
     haschildren = models.BooleanField()  # If it does, add to dictgroups
+    hide_name = models.BooleanField(default=False)
+    hide_value = models.BooleanField(default=False)
 
     # type = models.CharField(max_length=20)
     # attributes = models.CharField(max_length=300)
@@ -197,14 +210,6 @@ class JsonDictionaryEntry(models.Model):
         if self.haschildren and not DictGroup.objects.filter(dictentryid=self.pk).exists():
             dg = DictGroup(dictentryid=self.pk, name=self.displayvalue)
             dg.save()
-
-    def auto_gen_name(self):
-        init_name = re.search('[a-z][^A-Z]*', self.jsonvalue)
-        splitstring = [init_name.group(0)]
-        splitstring.extend(re.findall('[A-Z][^A-Z]*', self.jsonvalue))
-        splitstring[0] = splitstring[0].title()
-        joinstring = " ".join(splitstring)
-        return joinstring
 
     def update_display_value(self, value):
         self.displayvalue = value
