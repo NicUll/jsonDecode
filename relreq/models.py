@@ -1,4 +1,5 @@
 import json
+import re
 from os.path import join
 
 import requests
@@ -34,13 +35,13 @@ class JSONCleaner(object):
                                                                              'parent': parent,
                                                                              'displayvalue': key,
                                                                              'haschildren': haschildren})
-            # if created:
-            #     self.new_entries.append(key)
+            if created:
+                jsonobj.update_display_value(jsonobj.auto_gen_name())
+
             if haschildren:
                 dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
                                                                         defaults={'name': key, 'parent': parent.pk})
-                # if created:
-                #     self.new_groups.append(key)
+
                 return_string += "<div class='group " + dictgroupobj.name + "'><p class='parent-name'>" + key + "</p>"
                 return_string += self.iter_dict(value, dictgroupobj)
                 return_string += "</div>"
@@ -196,6 +197,20 @@ class JsonDictionaryEntry(models.Model):
             dg = DictGroup(dictentryid=self.pk, name=self.displayvalue)
             dg.save()
 
+    def auto_gen_name(self):
+        init_name = re.search('[a-z][^A-Z]*', self.jsonvalue)
+        splitstring = [init_name.group(0)]
+        print(splitstring)
+        splitstring.extend(re.findall('[A-Z][^A-Z]*', self.jsonvalue))
+        print(splitstring)
+        splitstring[0] = splitstring[0].title()
+        print(splitstring[0])
+        joinstring = " ".join(splitstring)
+        return joinstring
+
+    def update_display_value(self, value):
+        self.displayvalue = value
+        self.save()
 
 class GetType(models.Model):
     resourcepath = models.CharField(max_length=30)
