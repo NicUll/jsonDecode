@@ -20,13 +20,11 @@ class JSONCleaner(object):
         self.new_entries = []
         self.checked_keys = []
         self.compare_checksum = b''
-        self.parent_time = 0
-        self.child_time = 0
+        self.current_group = None
 
     def clean(self, json_text):
         start_time = time.time()
         data = json.loads(json_text)
-        print(data)
         data_checksum = self.make_checksum(data)
         self.compare_checksum, created = CheckSums.objects.get_or_create(value=data_checksum)
         print("Checksum done after: %ss" % (time.time() - start_time))
@@ -35,11 +33,11 @@ class JSONCleaner(object):
             print("Setup done after: %ss" % (time.time() - start_time))
         return_string = ""
         try:
-            return_string = self.generate_html(data, self.parent)
+            return_string = self.get_html(data)
         except ObjectDoesNotExist:
             self.setup_dict(data, self.parent)
             self.compare_checksum.delete()
-            return_string = self.generate_html(data, self.parent)
+            return_string = self.get_html(data)
         print("Elapsed time: %s" % (time.time() - start_time))
         return return_string
 
@@ -78,23 +76,23 @@ class JSONCleaner(object):
             haschildren = isinstance(value, dict) or isinstance(value, list)
             jsonobj, created = JsonDictionaryEntry.objects.get_or_create(parent=parent, jsonvalue=key,
                                                                          defaults={
-                                                                             'parent': parent,
                                                                              'displayvalue': key,
                                                                              'haschildren': haschildren})
             if created:
                 jsonobj.update_display_value(auto_gen_name(key))
 
             if haschildren:
-                dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
-                                                                        defaults={
-                                                                            'displayvalue': jsonobj.displayvalue,
-                                                                            'name': key,
-                                                                            'parent': parent.pk})
-                self.setup_dict(value, dictgroupobj)
+                self.setup_dict(value, jsonobj)
         return
 
+    def get_html(self, data):
+        return_string = "<section class='" + self.parent.jsonvalue + "'>\n"
+        return_string += self.generate_html(data, self.parent.pk)
+        return_string += "\n</section>"
+        return return_string
+
     def generate_html(self, data, parent):
-        return_string = "<section class='" + parent.name + "'>\n"
+        return_string = ""
 
         if isinstance(data, list):
             for entry in data:
@@ -102,24 +100,23 @@ class JSONCleaner(object):
             return return_string
 
         for key, value in data.items():
+
             jsonobj = JsonDictionaryEntry.objects.get(parent=parent, jsonvalue=key)
             if jsonobj.haschildren:
-                dictgroupobj = DictGroup.objects.get(dictentryid=jsonobj.pk)
+                # dictgroupobj = DictGroup.objects.get(dictentryid=jsonobj.pk)
+                return_string += "<div class='group " + jsonobj.jsonvalue + "'>"
+                if not jsonobj.hide_value:
+                    if not jsonobj.hide_name:
+                        return_string += "<p class='parent-name'>" + jsonobj.displayvalue + "</p>"
 
-                return_string += "<div class='group " + dictgroupobj.name + "'>"
-
-                if not jsonobj.hide_name:
-                    return_string += "<p class='parent-name'>" + dictgroupobj.displayvalue + "</p>"
-                return_string += self.generate_html(value, dictgroupobj)
-                return_string += "</div>"
+                    return_string += self.generate_html(value, jsonobj) + "</div>"
             else:
-                if (not jsonobj.hide_value) and (
-                        not JsonDictionaryEntry.objects.get(pk=jsonobj.parent.dictentryid).hide_value):
+                if not jsonobj.hide_value:
                     name_string = ""
                     if not jsonobj.hide_name:
                         name_string = jsonobj.displayvalue + ":"
                     return_string += "<p class='entry'> %s %s </p>" % (name_string, value)
-        return_string += "\n</section>\n"
+
         return return_string
 
 
@@ -132,17 +129,24 @@ class Requester(object):
         self.login = None
         self.results = None
         self.jsoncleaner = None
-        self.primary_dict_group = None
+        self.primary_group = None
 
     def generate_connection_string(self):
         connection = self.request.POST.get("connection")
         return Connection.objects.all().values_list('hosturl', flat=True).get(pk=connection)
 
     def generate_get_type(self):
+        maingroup, created = JsonDictionaryEntry.objects.get_or_create(pk=0,
+                                                                       jsonvalue='main',
+                                                                       displayvalue='Main', haschildren=True,
+                                                                       hide_name=True, hide_value=False)
         gettype = self.request.POST.get("gettype")
         primary_dg_name = GetType.objects.all().values_list('resourcename', flat=True).get(pk=gettype) + "_prim_group"
-        self.primary_dict_group, created = DictGroup.objects.get_or_create(name=primary_dg_name,
-                                                                           displayvalue=primary_dg_name)
+        self.primary_group, created = JsonDictionaryEntry.objects.get_or_create(jsonvalue=primary_dg_name,
+                                                                                defaults={
+                                                                                    'displayvalue': primary_dg_name,
+                                                                                    'haschildren': True,
+                                                                                    'parent': maingroup})
         return GetType.objects.all().values_list('resourcepath', flat=True).get(pk=gettype)
 
     def generate_querydata(self):
@@ -171,7 +175,7 @@ class Requester(object):
         return self.results.text
 
     def get_results_pretty(self):
-        self.jsoncleaner = JSONCleaner(self.primary_dict_group)
+        self.jsoncleaner = JSONCleaner(self.primary_group)
         return self.jsoncleaner.clean(self.get_results_text())
 
     # return values
@@ -255,7 +259,7 @@ class DictGroup(models.Model):
 
 
 class JsonDictionaryEntry(models.Model):
-    parent = models.ForeignKey(DictGroup, on_delete=models.CASCADE)  # All should have parent, top level has main
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True)  # All should have parent, top level has main
     jsonvalue = models.CharField(max_length=40)
     displayvalue = models.CharField(max_length=40)
     haschildren = models.BooleanField()  # If it does, add to dictgroups
@@ -279,7 +283,7 @@ class JsonDictionaryEntry(models.Model):
         self.save()
 
     def get_parent_id(self):
-        return self.parent.dictentryid
+        return self.parent
 
 
 class GetType(models.Model):

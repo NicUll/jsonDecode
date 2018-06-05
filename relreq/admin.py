@@ -51,7 +51,9 @@ class JsonDictionaryEntryAdmin(admin.ModelAdmin):
     actions = [auto_set_name, show_selected_names, hide_selected_names, show_selected_values, hide_selected_values, ]
 
     def link_to_parent(self, obj):
-        link = reverse('admin:relreq_dictgroup_change', args=[obj.parent.pk])
+        if obj.parent is None:
+            return "N/A"
+        link = reverse('admin:relreq_jsondictionaryentry_change', args=[obj.parent.pk])
         return format_html('<a href="{}">{}</a>', link, obj.parent.displayvalue)
 
     link_to_parent.short_description = 'Parent Group'
