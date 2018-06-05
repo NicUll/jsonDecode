@@ -1,4 +1,5 @@
 import json
+import pickle
 import re
 from os.path import join
 
@@ -16,19 +17,47 @@ class JSONCleaner(object):
         self.parent = parent
         self.new_groups = []
         self.new_entries = []
+        self.checked_keys = []
+
 
     def clean(self, json_text):
         data = json.loads(json_text)
-        return_string = self.iter_dict(data, self.parent)
-        return return_string
+        checksum, created = SimpleSetting.objects.get_or_create(name='checksum',
+                                                                defaults={'value': self.make_checksum(data)})
+        if created or (checksum.value == self.make_checksum(data)):
+            self.setup_dict(data, self.parent)
+        return self.generate_html(data, self.parent)
 
-    def iter_dict(self, data, parent):
-        return_string = "<section class='" + parent.name + "'>\n"
-
+    def make_checksum(self, data):
+        return_value = b''
         if isinstance(data, list):
             for entry in data:
-                return_string += self.iter_dict(entry, parent)
-            return return_string
+                checkvalue = self.make_checksum(entry)
+                if type(checkvalue) is None:
+                    continue
+                return_value += checkvalue
+            return
+
+        for key, value in data.items():
+            if type(key) is None:
+                continue
+            if key not in self.checked_keys:
+                self.checked_keys.append(key)
+                return_value += pickle.dumps(key)
+
+            haschildren = isinstance(value, dict) or isinstance(value, list)
+            if haschildren:
+                checkvalue = self.make_checksum(value)
+                if checkvalue is None:
+                    continue
+                return_value += checkvalue
+        return return_value
+
+    def setup_dict(self, data, parent):
+        if isinstance(data, list):
+            for entry in data:
+                self.setup_dict(entry, parent)
+            return
 
         for key, value in data.items():
             haschildren = isinstance(value, dict) or isinstance(value, list)
@@ -46,19 +75,40 @@ class JSONCleaner(object):
                                                                             'displayvalue': jsonobj.displayvalue,
                                                                             'name': key,
                                                                             'parent': parent.pk})
+                self.setup_dict(value, dictgroupobj)
+
+        return
+
+    def generate_html(self, data, parent):
+        return_string = "<section class='" + parent.name + "'>\n"
+
+        if isinstance(data, list):
+            for entry in data:
+                return_string += self.generate_html(entry, parent)
+            return return_string
+
+        for key, value in data.items():
+            haschildren = isinstance(value, dict) or isinstance(value, list)
+            jsonobj = JsonDictionaryEntry.objects.get(parent=parent, jsonvalue=key)
+
+            if haschildren:
+                dictgroupobj = DictGroup.objects.get(dictentryid=jsonobj.pk)
+
                 return_string += "<div class='group " + dictgroupobj.name + "'>"
-                if ~jsonobj.hide_name:
+
+                if not jsonobj.hide_name:
                     return_string += "<p class='parent-name'>" + dictgroupobj.displayvalue + "</p>"
-                return_string += self.iter_dict(value, dictgroupobj)
+                return_string += self.generate_html(value, dictgroupobj)
                 return_string += "</div>"
-
             else:
-                if ~jsonobj.hide_value and ~JsonDictionaryEntry.objects.get(pk=jsonobj.parent.dictentryid).hide_value:
-                    return_string += "<p class='entry'> %s: %s </p>" % (jsonobj.displayvalue, value)
-
+                if (not jsonobj.hide_value) and (
+                        not JsonDictionaryEntry.objects.get(pk=jsonobj.parent.dictentryid).hide_value):
+                    name_string = ""
+                    if not jsonobj.hide_name:
+                        name_string = jsonobj.displayvalue + ":"
+                    return_string += "<p class='entry'> %s %s </p>" % (name_string, value)
         return_string += "\n</section>\n"
         return return_string
-
 
 class Requester(object):
     validate = URLValidator()
@@ -225,3 +275,11 @@ class GetType(models.Model):
 
     def __str__(self):
         return self.resourcename
+
+
+class SimpleSetting(models.Model):
+    name = models.CharField(max_length=30)
+    value = models.CharField(max_length=300)
+
+    def __str__(self):
+        return self.name
