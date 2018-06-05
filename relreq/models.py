@@ -1,10 +1,11 @@
+import time
 import json
 import pickle
 import re
 from os.path import join
 
 import requests
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import URLValidator
 from django.db import models
 
@@ -18,15 +19,29 @@ class JSONCleaner(object):
         self.new_groups = []
         self.new_entries = []
         self.checked_keys = []
-
+        self.compare_checksum = b''
+        self.parent_time = 0
+        self.child_time = 0
 
     def clean(self, json_text):
+        start_time = time.time()
         data = json.loads(json_text)
-        checksum, created = SimpleSetting.objects.get_or_create(name='checksum',
-                                                                defaults={'value': self.make_checksum(data)})
-        if created or (checksum.value == self.make_checksum(data)):
+        print(data)
+        data_checksum = self.make_checksum(data)
+        self.compare_checksum, created = CheckSums.objects.get_or_create(value=data_checksum)
+        print("Checksum done after: %ss" % (time.time() - start_time))
+        if created:
             self.setup_dict(data, self.parent)
-        return self.generate_html(data, self.parent)
+            print("Setup done after: %ss" % (time.time() - start_time))
+        return_string = ""
+        try:
+            return_string = self.generate_html(data, self.parent)
+        except ObjectDoesNotExist:
+            self.setup_dict(data, self.parent)
+            self.compare_checksum.delete()
+            return_string = self.generate_html(data, self.parent)
+        print("Elapsed time: %s" % (time.time() - start_time))
+        return return_string
 
     def make_checksum(self, data):
         return_value = b''
@@ -76,7 +91,6 @@ class JSONCleaner(object):
                                                                             'name': key,
                                                                             'parent': parent.pk})
                 self.setup_dict(value, dictgroupobj)
-
         return
 
     def generate_html(self, data, parent):
@@ -88,10 +102,8 @@ class JSONCleaner(object):
             return return_string
 
         for key, value in data.items():
-            haschildren = isinstance(value, dict) or isinstance(value, list)
             jsonobj = JsonDictionaryEntry.objects.get(parent=parent, jsonvalue=key)
-
-            if haschildren:
+            if jsonobj.haschildren:
                 dictgroupobj = DictGroup.objects.get(dictentryid=jsonobj.pk)
 
                 return_string += "<div class='group " + dictgroupobj.name + "'>"
@@ -109,6 +121,7 @@ class JSONCleaner(object):
                     return_string += "<p class='entry'> %s %s </p>" % (name_string, value)
         return_string += "\n</section>\n"
         return return_string
+
 
 class Requester(object):
     validate = URLValidator()
@@ -283,3 +296,7 @@ class SimpleSetting(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CheckSums(models.Model):
+    value = models.CharField(max_length=300)

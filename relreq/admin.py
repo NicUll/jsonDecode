@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from relreq.namegenerator import auto_gen_name
-from .models import Connection, JsonDictionaryEntry, DictGroup, GetType, SimpleSetting
+from .models import Connection, JsonDictionaryEntry, DictGroup, GetType, SimpleSetting, CheckSums
 
 
 def auto_set_name(modeladmin, request, queryset):
@@ -69,4 +69,4 @@ admin.site.register(Connection, ConnectionAdmin)
 admin.site.register(DictGroup, DictGroupAdmin)
 admin.site.register(GetType, GetTypeAdmin)
 admin.site.register(JsonDictionaryEntry, JsonDictionaryEntryAdmin)
-admin.site.register(SimpleSetting)
+admin.site.register(CheckSums)
