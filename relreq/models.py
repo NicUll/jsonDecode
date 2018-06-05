@@ -39,21 +39,21 @@ class JSONCleaner(object):
                                                                              'haschildren': haschildren})
             if created:
                 jsonobj.update_display_value(auto_gen_name(key))
-            print(jsonobj.displayvalue)
 
             if haschildren:
                 dictgroupobj, created = DictGroup.objects.get_or_create(dictentryid=jsonobj.pk,
-                                                                        defaults={'name': key,
-                                                                                  'displayvalue': jsonobj.displayvalue,
-                                                                                  'parent': parent.pk})
+                                                                        defaults={
+                                                                            'displayvalue': jsonobj.displayvalue,
+                                                                            'name': key,
+                                                                            'parent': parent.pk})
                 return_string += "<div class='group " + dictgroupobj.name + "'>"
                 if ~jsonobj.hide_name:
-                    return_string += "<p class='parent-name'>" + dictgroupobj.name + "</p>"
+                    return_string += "<p class='parent-name'>" + dictgroupobj.displayvalue + "</p>"
                 return_string += self.iter_dict(value, dictgroupobj)
                 return_string += "</div>"
 
             else:
-                if ~jsonobj.hide_value and ~JsonDictionaryEntry.objects.get(jsonobj.parent).hide_value:
+                if ~jsonobj.hide_value and ~JsonDictionaryEntry.objects.get(pk=jsonobj.parent.dictentryid).hide_value:
                     return_string += "<p class='entry'> %s: %s </p>" % (jsonobj.displayvalue, value)
 
         return_string += "\n</section>\n"
@@ -167,7 +167,7 @@ class Connection(models.Model):
 
 class DictGroup(models.Model):
     name = models.CharField(max_length=40)
-    displayvalue = models.CharField(max_length=40, null=True, blank=True)
+    displayvalue = models.CharField(max_length=40, null=True)
     dictentryid = models.IntegerField(null=True, blank=True)
     parent = models.IntegerField(null=True, blank=True)
 
@@ -205,15 +205,18 @@ class JsonDictionaryEntry(models.Model):
     def __str__(self):
         return self.displayvalue
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if self.haschildren and not DictGroup.objects.filter(dictentryid=self.pk).exists():
-            dg = DictGroup(dictentryid=self.pk, name=self.displayvalue)
-            dg.save()
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     if self.haschildren and not DictGroup.objects.filter(dictentryid=self.pk).exists():
+    #         dg = DictGroup(dictentryid=self.pk, name=self.displayvalue)
+    #         dg.save()
 
     def update_display_value(self, value):
         self.displayvalue = value
         self.save()
+
+    def get_parent_id(self):
+        return self.parent.dictentryid
 
 
 class GetType(models.Model):

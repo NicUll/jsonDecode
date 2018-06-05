@@ -11,7 +11,8 @@ def auto_set_name(modeladmin, request, queryset):
         obj.update_display_value(auto_gen_name(obj.jsonvalue))
 
 
-
+class DictGroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'displayvalue', 'parent', 'dictentryid')
 
 class JsonDictionaryEntryAdmin(admin.ModelAdmin):
     list_display = ('jsonvalue', 'displayvalue', 'link_to_parent', 'haschildren', 'hide_name', 'hide_value')
@@ -36,6 +37,6 @@ class GetTypeAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Connection, ConnectionAdmin)
-admin.site.register(DictGroup)
+admin.site.register(DictGroup, DictGroupAdmin)
 admin.site.register(GetType, GetTypeAdmin)
 admin.site.register(JsonDictionaryEntry, JsonDictionaryEntryAdmin)
